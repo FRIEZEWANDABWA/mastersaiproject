@@ -1,5 +1,11 @@
-# Data files (large datasets)
-data/
+# Data files — images are NOT tracked by git (too large)
+# We keep the folder structure using .gitkeep files instead.
+data/raw/maize_healthy/*
+data/raw/maize_streak/*
+data/raw/maize_mln/*
+!data/raw/maize_healthy/.gitkeep
+!data/raw/maize_streak/.gitkeep
+!data/raw/maize_mln/.gitkeep
 
 # Python cache
 __pycache__/
@@ -16,11 +22,16 @@ ENV/
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints
 
-# Model files (can be large)
+# Model files (large binaries)
 *.h5
 *.pkl
 *.pth
 *.ckpt
+*.tflite
+
+# Results & logs (generated at runtime)
+results/
+logs/
 
 # IDE settings
 .vscode/
@@ -31,10 +42,6 @@ ENV/
 # OS files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-logs/
 
 # Distribution / packaging
 dist/

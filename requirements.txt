@@ -4,3 +4,8 @@ matplotlib
 pandas
 scikit-learn
 pillow
+numpy
+seaborn
+lime
+jupyter
+tensorboard
