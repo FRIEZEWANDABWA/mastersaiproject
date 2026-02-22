@@ -70,11 +70,23 @@ def load_maize_data():
     print(f"Number of training batches: {len(train_ds)}")
     print(f"Number of validation batches: {len(val_ds)}")
 
-    # 3. Performance optimization (autotuning)
-    # This ensures CPU and GPU work in parallel for maximum efficiency
+    # 3. Performance optimisation + one-hot encoding for categorical_crossentropy
     AUTOTUNE = tf.data.AUTOTUNE
-    train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
-    val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
+    num_classes = len(class_names)
+
+    def one_hot(images, labels):
+        return images, tf.one_hot(labels, num_classes)
+
+    train_ds = (train_ds
+                .cache()
+                .shuffle(1000)
+                .map(one_hot, num_parallel_calls=AUTOTUNE)
+                .prefetch(buffer_size=AUTOTUNE))
+
+    val_ds = (val_ds
+              .cache()
+              .map(one_hot, num_parallel_calls=AUTOTUNE)
+              .prefetch(buffer_size=AUTOTUNE))
 
     return train_ds, val_ds, class_names
 

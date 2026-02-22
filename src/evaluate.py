@@ -75,8 +75,12 @@ def evaluate_model(model: tf.keras.Model,
     all_true, all_pred = [], []
     for images, labels in val_ds:
         preds = model.predict(images, verbose=0)
-        all_true.extend(labels.numpy())
-        all_pred.extend(np.argmax(preds, axis=1))
+        # Labels may be integer (sparse) or one-hot depending on data_loader
+        label_vals = labels.numpy()
+        if label_vals.ndim > 1:
+            label_vals = np.argmax(label_vals, axis=1)  # one-hot → integer
+        all_true.extend(label_vals.tolist())
+        all_pred.extend(np.argmax(preds, axis=1).tolist())
 
     return {
         'true_labels': np.array(all_true),

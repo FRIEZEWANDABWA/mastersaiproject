@@ -2,8 +2,10 @@
 Training pipeline for maize disease classification.
 
 Implements a two-phase training strategy:
-  Phase 1 — Frozen Base  : Train only the classifier head (fast convergence)
-  Phase 2 — Fine-tuning  : Unfreeze top MobileNetV2 layers (higher accuracy)
+  Phase 1 — Frozen Base  : Train only the ResNet50 classifier head (fast convergence)
+  Phase 2 — Fine-tuning  : Unfreeze top ResNet50 layers (higher accuracy)
+
+Research benchmark: Nkuna et al. 2025 — Adam LR=0.001, Categorical Cross-Entropy, Input 224×224×3
 
 Usage:
     python src/train.py
@@ -24,7 +26,7 @@ import tensorflow as tf
 import config
 from src.data_loader import load_maize_data
 from src.augmentation import apply_augmentation
-from src.model import build_model, unfreeze_and_fine_tune
+from src.model_builder import build_resnet50_model, unfreeze_and_fine_tune
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -126,12 +128,14 @@ def train():
     train_ds = apply_augmentation(train_ds)
 
     # ── 3. Phase 1: Frozen base training ────────────────────────────
-    print("\n🔒 PHASE 1 — Frozen Base Training")
+    print("\n🔒 PHASE 1 — Frozen ResNet50 Base Training")
     print("-" * 65)
-    model = build_model(fine_tune=False)
+    model = build_resnet50_model(fine_tune=False)
     model.summary(print_fn=lambda x: None)   # suppress verbose summary
+    print(f"   Backbone   : ResNet50 (ImageNet weights)")
+    print(f"   Optimizer  : Adam  |  LR : {config.LEARNING_RATE}")
+    print(f"   Loss       : {config.LOSS}")
     print(f"   Epochs     : {config.EPOCHS_FROZEN}")
-    print(f"   LR         : {config.LR_FROZEN}")
     print(f"   Batch size : {config.BATCH_SIZE}")
 
     history_frozen = model.fit(
@@ -144,11 +148,11 @@ def train():
     plot_history(history_frozen, 'frozen')
 
     # ── 4. Phase 2: Fine-tuning ─────────────────────────────────────
-    print("\n🔓 PHASE 2 — Fine-Tuning (top layers unfrozen)")
+    print("\n🔓 PHASE 2 — Fine-Tuning (top ResNet50 layers unfrozen)")
     print("-" * 65)
     model = unfreeze_and_fine_tune(model)
     print(f"   Epochs     : {config.EPOCHS_FINETUNE}")
-    print(f"   LR         : {config.LR_FINETUNE}")
+    print(f"   LR         : {config.LR_FINETUNE}  (reduced to prevent catastrophic forgetting)")
 
     history_finetune = model.fit(
         train_ds,
