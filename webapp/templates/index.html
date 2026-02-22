@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MaizeGuard AI — Maize Disease Classifier | OUK MSc AI</title>
+  <meta name="description" content="AI-powered maize leaf disease detection using ResNet50 deep learning. MSc AI Project, Open University of Kenya." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+
+<!-- ── Animated background ──────────────────────────────────────────────── -->
+<div class="bg-grid"></div>
+<div class="bg-glow bg-glow-1"></div>
+<div class="bg-glow bg-glow-2"></div>
+
+<!-- ── Header ───────────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="container">
+    <div class="logo">
+      <span class="logo-icon">🌽</span>
+      <div>
+        <span class="logo-title">MaizeGuard <span class="logo-ai">AI</span></span>
+        <span class="logo-sub">Disease Detection System</span>
+      </div>
+    </div>
+    <nav class="nav">
+      <span class="badge {% if model_ready %}badge-live{% else %}badge-demo{% endif %}">
+        {% if model_ready %}● LIVE MODEL{% else %}● DEMO MODE{% endif %}
+      </span>
+    </nav>
+  </div>
+</header>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-content">
+      <div class="hero-badge">MSc AI Research — Open University of Kenya</div>
+      <h1 class="hero-title">
+        Detect Maize Diseases<br/>
+        <span class="gradient-text">Instantly with AI</span>
+      </h1>
+      <p class="hero-desc">
+        Upload a photo of your maize leaf. Our ResNet50 deep learning model
+        classifies it in seconds and shows exactly what the AI is looking at
+        through Grad-CAM visual explanations.
+      </p>
+      <div class="hero-stats">
+        <div class="stat-pill">
+          <span class="stat-num">3</span>
+          <span class="stat-lbl">Disease Classes</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">224px</span>
+          <span class="stat-lbl">Input Resolution</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">ResNet50</span>
+          <span class="stat-lbl">Architecture</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Main classifier ──────────────────────────────────────────────────── -->
+<main class="main">
+  <div class="container">
+    <div class="classifier-grid">
+
+      <!-- Upload Panel -->
+      <div class="panel upload-panel">
+        <div class="panel-header">
+          <span class="panel-icon">📷</span>
+          <h2>Upload Leaf Image</h2>
+        </div>
+
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp" hidden />
+          <div class="upload-idle" id="uploadIdle">
+            <div class="upload-icon-wrap">
+              <svg class="upload-svg" viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="23" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>
+                <path d="M24 32V16M16 24l8-8 8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <p class="upload-title">Drop your image here</p>
+            <p class="upload-sub">or <button class="link-btn" onclick="document.getElementById('fileInput').click()">browse files</button></p>
+            <p class="upload-hint">JPG · PNG · WEBP · up to 16 MB</p>
+          </div>
+          <div class="upload-preview" id="uploadPreview" style="display:none">
+            <img id="previewImg" alt="Uploaded leaf" />
+            <button class="clear-btn" id="clearBtn" title="Remove">✕</button>
+          </div>
+        </div>
+
+        <button class="analyze-btn" id="analyzeBtn" disabled>
+          <span class="btn-text">Analyse Leaf</span>
+          <span class="btn-spinner" id="btnSpinner" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity=".25"/><path d="M12 2a10 10 0 0110 10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </span>
+        </button>
+
+        <!-- Quick-use tips -->
+        <div class="tips-box">
+          <h4>📋 Tips for best results</h4>
+          <ul>
+            <li>Use a close-up of a single leaf</li>
+            <li>Good natural lighting, no flash</li>
+            <li>Leaf fills at least 60% of frame</li>
+            <li>Avoid blurry or night photos</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="panel results-panel" id="resultsPanel">
+
+        <!-- Empty state -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">🔬</div>
+          <h3>Ready to analyse</h3>
+          <p>Upload a maize leaf image on the left to see the AI prediction and explainability heatmap.</p>
+        </div>
+
+        <!-- Loading state -->
+        <div class="loading-state" id="loadingState" style="display:none">
+          <div class="loader-ring"></div>
+          <p>Analysing your leaf…</p>
+          <span>Running ResNet50 inference</span>
+        </div>
+
+        <!-- Result content -->
+        <div class="result-content" id="resultContent" style="display:none">
+
+          <div class="result-header" id="resultHeader">
+            <span class="result-icon" id="resultIcon"></span>
+            <div>
+              <h2 class="result-label" id="resultLabel"></h2>
+              <p class="result-conf" id="resultConf"></p>
+            </div>
+          </div>
+
+          <div class="advice-box" id="adviceBox">
+            <span class="advice-icon">💡</span>
+            <p id="adviceText"></p>
+          </div>
+
+          <!-- Probability bars -->
+          <div class="prob-section">
+            <h4>Class Probabilities</h4>
+            <div id="probBars"></div>
+          </div>
+
+          <!-- Grad-CAM -->
+          <div class="gradcam-section" id="gradcamSection" style="display:none">
+            <h4>🔍 Grad-CAM Explanation <span class="xai-badge">XAI</span></h4>
+            <p class="gradcam-desc">Highlighted regions show where the AI focused its attention</p>
+            <div class="gradcam-wrap">
+              <div class="gradcam-img-box">
+                <img id="gradcamImg" alt="Grad-CAM heatmap" />
+                <span class="img-label">Attention Map</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="demo-notice" id="demoNotice" style="display:none">
+            ⚠️ <strong>Demo Mode:</strong> Predictions are illustrative only. Train the model first for real results.
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.classifier-grid -->
+
+    <!-- ── Dataset & About ─────────────────────────────────────────────── -->
+    <div class="info-grid">
+
+      <div class="panel info-panel">
+        <div class="panel-header">
+          <span class="panel-icon">📊</span>
+          <h3>Dataset Status</h3>
+        </div>
+        <p class="info-sub">Current training data in <code>data/raw/</code></p>
+        <div class="class-bars">
+          {% set total = stats.healthy + stats.streak + stats.mln %}
+          {% set target = 150 %}
+
+          <div class="class-row">
+            <div class="class-meta">
+              <span class="dot dot-green"></span>
+              <span>Healthy</span>
+            </div>
+            <div class="class-bar-wrap">
+              <div class="class-bar" style="width:{{ [stats.healthy / target * 100, 100] | min }}%; background:#22c55e"></div>
+            </div>
+            <span class="class-count">{{ stats.healthy }}/50</span>
+          </div>
+
+          <div class="class-row">
+            <div class="class-meta">
+              <span class="dot dot-amber"></span>
+              <span>Streak</span>
+            </div>
+            <div class="class-bar-wrap">
+              <div class="class-bar" style="width:{{ [stats.streak / 50 * 100, 100] | min }}%; background:#f59e0b"></div>
+            </div>
+            <span class="class-count">{{ stats.streak }}/50</span>
+          </div>
+
+          <div class="class-row">
+            <div class="class-meta">
+              <span class="dot dot-red"></span>
+              <span>MLN</span>
+            </div>
+            <div class="class-bar-wrap">
+              <div class="class-bar" style="width:{{ [stats.mln / 50 * 100, 100] | min }}%; background:#ef4444"></div>
+            </div>
+            <span class="class-count">{{ stats.mln }}/50</span>
+          </div>
+        </div>
+        <p class="total-label">Total: <strong>{{ total }}</strong> images &nbsp;·&nbsp; Target: <strong>{{ target }}+</strong></p>
+      </div>
+
+      <div class="panel info-panel">
+        <div class="panel-header">
+          <span class="panel-icon">🏗️</span>
+          <h3>Model Architecture</h3>
+        </div>
+        <div class="arch-list">
+          <div class="arch-item"><span class="arch-key">Backbone</span><span class="arch-val">ResNet50 (ImageNet)</span></div>
+          <div class="arch-item"><span class="arch-key">Attention</span><span class="arch-val">SE-Attention Block</span></div>
+          <div class="arch-item"><span class="arch-key">Optimizer</span><span class="arch-val">Adam (LR = 0.001)</span></div>
+          <div class="arch-item"><span class="arch-key">Loss</span><span class="arch-val">Categorical Cross-Entropy</span></div>
+          <div class="arch-item"><span class="arch-key">Input</span><span class="arch-val">224 × 224 × 3</span></div>
+          <div class="arch-item"><span class="arch-key">XAI</span><span class="arch-val">Grad-CAM + LIME</span></div>
+          <div class="arch-item"><span class="arch-key">Benchmark</span><span class="arch-val">Nkuna et al. 2025</span></div>
+        </div>
+      </div>
+
+      <div class="panel info-panel">
+        <div class="panel-header">
+          <span class="panel-icon">📚</span>
+          <h3>Disease Classes</h3>
+        </div>
+        <div class="disease-list">
+          <div class="disease-item">
+            <span class="disease-dot" style="background:#22c55e"></span>
+            <div>
+              <strong>Healthy</strong>
+              <p>Uniform green leaf, no lesions or streaks</p>
+            </div>
+          </div>
+          <div class="disease-item">
+            <span class="disease-dot" style="background:#f59e0b"></span>
+            <div>
+              <strong>Maize Streak Virus (MSV)</strong>
+              <p>Broken yellow-white streaks parallel to leaf veins; spread by leafhoppers</p>
+            </div>
+          </div>
+          <div class="disease-item">
+            <span class="disease-dot" style="background:#ef4444"></span>
+            <div>
+              <strong>Maize Lethal Necrosis (MLN)</strong>
+              <p>Chlorotic mottle across whole plant; causes total crop failure if untreated</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.info-grid -->
+  </div>
+</main>
+
+<!-- ── Footer ───────────────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="container">
+    <p>
+      <strong>MaizeGuard AI</strong> &nbsp;·&nbsp;
+      MSc Artificial Intelligence — Open University of Kenya (OUK) &nbsp;·&nbsp;
+      Candidate: WANDABWA Frieze (ST62/55175/2025) &nbsp;·&nbsp;
+      Supervisor: Dr. Richard Rimiru
+    </p>
+    <p class="footer-sub">Powered by ResNet50 + TensorFlow 2.20 &nbsp;·&nbsp; FRIENDS Framework Compliant</p>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
